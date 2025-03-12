@@ -4,15 +4,15 @@ import config
 
 bot = telebot.TeleBot(config.token)
 
-api_key = "апишка"
+api_key = "3f9a6b1234567890abcdef1234567890"
+
+@bot.message_handler(commands=["start"])
+def send_weather(message):
+   bot.send_message(message.chat.id, "Введите название города на английском языке:")
 
 @bot.message_handler(content_types=["text"])
-def handle_text(message):
+def get_weather(message):
    city = message.text
-   return city
-
-def get_weather():
-
    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric&lang=ru"
    data = requests.get(url).json()
    temp = data["main"]["temp"]
@@ -22,10 +22,8 @@ def get_weather():
    description = data["weather"][0]["description"]
    cloudiness = data["clouds"]["all"]
 
-   return f"| Температура: {temp}°C\n| Ветер: {wind} m/s\n| Влажность: {humidity}%\n| Давление: {pressure} hPa\n| Описание: {description.capitalize()}\n| Облачность: {cloudiness}%"
+   weather_info = (f"| Температура: {temp}°C\n| Ветер: {wind} m/s\n| Влажность: {humidity}%\n| Давление: {pressure} hPa\n| Описание: {description.capitalize()}\n| Облачность: {cloudiness}%")
 
-@bot.message_handler(commands=["start"])
-def send_weather(message):
-   bot.send_message(message.chat.id, get_weather())
+   bot.send_message(message.chat.id, weather_info)
 
 bot.polling()
