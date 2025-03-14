@@ -2,8 +2,10 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 import os
 import config
+import requests
 
 bot = telebot.TeleBot(config.token)
+api_key = "17697edb22cd6287f4a12ccb3e497513"
 
 regions = {
    "Северный Казахстан": ["Петропавловск", "Кокшетау", "Костанай", "Астана"],
@@ -54,6 +56,18 @@ city_info = {
                "A:/yer4ss/Work/im python/bot gid/images/Балхаш.jpg")
 }
 
+def get_weather(city):
+   url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric&lang=ru"
+   response = requests.get(url).json()
+   if response.get("main"):
+      weather_desc = response['weather'][0]['description']
+      temp = response['main']['temp']
+      wind = response['wind']['speed']
+      humidity = response['main']['humidity']
+      return f"{weather_desc.capitalize()}\n| Температура: {temp}°C\n| Ветер: {wind} м/с\n| Влажность: {humidity}%"
+   else:
+      return "Не удалось получить погоду."
+
 @bot.message_handler(commands=['start'])
 def start(message):
    markup = InlineKeyboardMarkup()
@@ -78,7 +92,7 @@ def show_menu(message):
    bot.send_message(message.chat.id, "Выберите команду:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data in regions)
-def vybor_regiona(call):
+def select_region(call):
    region = call.data
    markup = InlineKeyboardMarkup()
    for city in regions[region]:
@@ -87,17 +101,20 @@ def vybor_regiona(call):
    bot.edit_message_text(f"Вы выбрали регион {region}. Выберите город:", call.message.chat.id, call.message.message_id, reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data == "back")
-def nazad(call):
-   start(call.message)
+def back(call):
+   select_region(call.message)
 
 @bot.callback_query_handler(func=lambda call: call.data in city_info)
 def select_city(call):
    city = call.data
    info, img_path = city_info[city]
+   weather = get_weather(city)
    with open(img_path, "rb") as photo:
-      bot.send_photo(call.message.chat.id, photo, caption=f"{city}: {info}")
+      bot.send_photo(call.message.chat.id, photo, caption=f"{city}: {info}\n\n Погода: {weather}")
 
 
 
-if __name__ == "__main__":
-   bot.infinity_polling()
+bot.polling(none_stop=True)
+
+# if __name__ == "__main__":
+#    bot.infinity_polling()

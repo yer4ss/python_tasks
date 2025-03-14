@@ -4,11 +4,11 @@ import config
 
 bot = telebot.TeleBot(config.token)
 
-api_key = "3f9a6b1234567890abcdef1234567890"
+api_key = "17697edb22cd6287f4a12ccb3e497513"
 
 @bot.message_handler(commands=["start"])
 def send_weather(message):
-   bot.send_message(message.chat.id, "Введите название города на английском языке:")
+   bot.send_message(message.chat.id, "Введите название города")
 
 @bot.message_handler(content_types=["text"])
 def get_weather(message):
