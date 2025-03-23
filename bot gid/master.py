@@ -1,13 +1,13 @@
 import telebot
+import config
 from telebot import types
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 import requests
 import time
+import requests.exceptions
 
-TOKEN = 'YOUR_BOT_TOKEN'
-api_key = 'YOUR_OPENWEATHERMAP_API_KEY'
-
-bot = telebot.TeleBot(TOKEN)
+bot = telebot.TeleBot(config.token)
+api_key = '17697edb22cd6287f4a12ccb3e497513'
 
 regions_data = {
     "Северный Казахстан": {"cities": ["Петропавловск", "Кокшетау", "Костанай", "Астана"]},
@@ -125,54 +125,86 @@ def start(message):
 
 @bot.message_handler(commands=['help'])
 def help(message):
-    bot.send_message(message.chat.id, "Не  суетись да, братишка жи ес, я тебе здесь не поддержка канкретно.")
+    bot.send_message(message.chat.id, "Этот бот показывает информацию о городах Казахстана. Выберите регион и город, чтобы узнать о нём больше.\n")
 
 @bot.message_handler(commands=['about'])
 def about(message):
-    bot.send_message(message.chat.id, "Этот бот канкретно жи ес делает прогулка канкретно по городам Казахстана.\n"
-                                        "Суету делает канкретно жи ес, понял да жи ес!?.\n"
-                                        "Выбираешь канкретно местность и город, и бот канкретно жи ес показывает фото и описание канкретно жи ес.")
+    bot.send_message(message.chat.id, "Этот бот создан для показа информации о городах Казахстана. "
+                                        "Данные о городах и погоде берутся с открытых источников. "
+                                        "Для получения погоды используется API OpenWeatherMap.\n")
 
 # Функция для получения погоды с кешем
 def get_weather(city):
     current_time = time.time()
     if city in weather_cache and current_time - weather_cache[city]['time'] < CACHE_TIMEOUT:
         return weather_cache[city]['data']
-    
+
     url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric&lang=ru"
     response = requests.get(url).json()
     if response.get("main"):
         weather_desc = response['weather'][0]['description']
-        temp = response['main']['temp']
-        wind = response['wind']['speed']
-        humidity = response['main']['humidity']
-        weather_data = f"{weather_desc.capitalize()}\n| Температура: {temp}°C\n| Ветер: {wind} м/с\n| Влажность: {humidity}%"
+        temp = response["main"]["temp"]
+        wind = response["wind"]["speed"]
+        humidity = response["main"]["humidity"]
+        pressure = response["main"]["pressure"]
+        cloudiness = response["clouds"]["all"]
+
+        weather_data = (
+            f"{weather_desc.capitalize()}\n"
+            f"🌡️ Температура: {temp}°C\n"
+            f"💨 Ветер: {wind} м/с\n"
+            f"💧 Влажность: {humidity}%\n"
+            f"🔽 Давление: {pressure} мм рт. ст.\n"
+            f"☁️ Облачность: {cloudiness}%"
+        )
         weather_cache[city] = {'data': weather_data, 'time': current_time}
         return weather_data
+
     else:
         return "Не удалось получить погоду."
+
 
 
 @bot.callback_query_handler(func=lambda call: call.data in regions_data)
 def select_region(call):
     region = call.data
     markup = InlineKeyboardMarkup()
-    for city in regions_data[region]:
+    for city in regions_data[region]["cities"]:
         markup.add(InlineKeyboardButton(city, callback_data=city))
     markup.add(InlineKeyboardButton("* Выбрать другой регион *", callback_data="back"))
     bot.edit_message_text(f"Вы выбрали регион {region}. Выберите город:", call.message.chat.id, call.message.message_id, reply_markup=markup)
 
+
 @bot.callback_query_handler(func=lambda call: call.data == "back")
 def back(call):
-    select_region(call.message)
+    markup = InlineKeyboardMarkup()
+    for region in regions_data:
+        markup.add(InlineKeyboardButton(region, callback_data=region))
+    bot.edit_message_text("Выберите регион:", call.message.chat.id, call.message.message_id, reply_markup=markup)
+
 
 @bot.callback_query_handler(func=lambda call: call.data in city_info)
 def select_city(call):
     city = call.data
-    info, img_path = city_info[city]
+    info = city_info[city]
     weather = get_weather(city)
-    with open(img_path, "rb") as photo:
-        bot.send_photo(call.message.chat.id, photo, caption=f"{city}: {info}\n\n Погода: {weather}")
+    img_path = city_images.get(city)
+
+    try:
+        with open(img_path, "rb") as photo:
+            bot.send_photo(call.message.chat.id, photo, caption=f"{city}: {info}")
+        bot.send_message(call.message.chat.id, f"🌤️ Погода в {city}: {weather}")
+
+    except requests.exceptions.ConnectionError:
+        bot.send_message(call.message.chat.id, f"⚠️ Проблемы с подключением. Пробую снова...")
+        time.sleep(5)
+        select_city(call)  # Пробуем повторно отправить фото
+
+    except Exception as e:
+        bot.send_message(call.message.chat.id, f"⚠️ Ошибка: {e}")
+
+
+
 
 # Обработчик выбора категории
 @bot.callback_query_handler(func=lambda call: call.data.startswith("category"))
@@ -184,7 +216,6 @@ def show_places(call):
     bot.send_message(call.message.chat.id, "Выберите ещё место или вернитесь назад:", reply_markup=create_buttons(categories.keys(), "category", city))
 
 # Универсальная функция для создания кнопок
-
 def create_buttons(buttons_data, prefix, city=None):
     markup = types.InlineKeyboardMarkup()
     for item in buttons_data:
