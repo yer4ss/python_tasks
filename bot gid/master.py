@@ -6,7 +6,7 @@ import requests
 import time
 import requests.exceptions
 
-bot = telebot.TeleBot(config.token)
+bot = telebot.TeleBot('7780668347:AAFTwSbXzNg02naVu_g2x-k2GiPiYPVlOng')
 api_key = '17697edb22cd6287f4a12ccb3e497513'
 
 regions_data = {
@@ -171,7 +171,7 @@ def select_region(call):
     markup = InlineKeyboardMarkup()
     for city in regions_data[region]["cities"]:
         markup.add(InlineKeyboardButton(city, callback_data=city))
-    markup.add(InlineKeyboardButton("* Выбрать другой регион *", callback_data="back"))
+    markup.add(InlineKeyboardButton("<< Назад", callback_data="back"))
     bot.edit_message_text(f"Вы выбрали регион {region}. Выберите город:", call.message.chat.id, call.message.message_id, reply_markup=markup)
 
 
