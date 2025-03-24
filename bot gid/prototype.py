@@ -86,7 +86,7 @@ city_maps = {
 @bot.message_handler(commands=['start'])
 def start(message):
    markup = types.InlineKeyboardMarkup()
-   for region in regions_data:
+   for region in regions:
       markup.add(InlineKeyboardButton(region, callback_data=region))
    
    bot.send_message(message.chat.id, 
