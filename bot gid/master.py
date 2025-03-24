@@ -164,7 +164,6 @@ def get_weather(city):
         return "Не удалось получить погоду."
 
 
-
 @bot.callback_query_handler(func=lambda call: call.data in regions_data)
 def select_region(call):
     region = call.data
@@ -202,8 +201,6 @@ def select_city(call):
 
     except Exception as e:
         bot.send_message(call.message.chat.id, f"⚠️ Ошибка: {e}")
-
-
 
 
 # Обработчик выбора категории

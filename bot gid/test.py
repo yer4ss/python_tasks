@@ -1,6 +1,7 @@
 import telebot
 import webbrowser
 from telebot import types
+import os
 
 bot = telebot.TeleBot('7780668347:AAFTwSbXzNg02naVu_g2x-k2GiPiYPVlOng')
 # api_key = '17697edb22cd6287f4a12ccb3e497513'
@@ -52,6 +53,21 @@ def about(message):
 @bot.message_handler(commands=['map', 'location'])                 # открывает карту
 def map(message):
     webbrowser.open('https://www.google.com/maps')
+
+
+@bot.message_handler(commands=['stop'])
+def stop(message):
+    chat_id = message.chat.id
+
+    # Удаляем последние 20 сообщений (можно увеличить)
+    for i in range(message.message_id - 20, message.message_id + 1):
+        try:
+            bot.delete_message(chat_id, i)
+        except Exception as e:
+            print(f"Не удалось удалить сообщение {i}: {e}")
+
+    bot.send_message(chat_id, "До свидания! Если захочешь поговорить, пиши /start.")
+    os._exit(0)
 
 
 @bot.message_handler(content_types=['text'])             # обрабатывает сообщения простым текстом
