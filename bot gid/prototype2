@@ -1,0 +1,106 @@
+import telebot
+from telebot import types
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
+import os
+import requests
+import time
+
+
+bot = telebot.TeleBot('7780668347:AAFTwSbXzNg02naVu_g2x-k2GiPiYPVlOng')
+api_key = '17697edb22cd6287f4a12ccb3e497513'
+
+
+cities = [
+   "Петропавловск", "Кокшетау", "Костанай", "Астана",
+   "Шымкент", "Тараз", "Кызылорда", "Туркестан", "Алматы",
+   "Атырау", "Уральск", "Актау", "Актобе",
+   "Усть-Каменогорск", "Семей", "Павлодар",
+   "Караганда", "Темиртау", "Талдыкорган"
+]
+
+city_maps = {
+   "Астана": "https://www.google.com/maps/search/?q=Астана&hl=ru",
+   "Алматы": "https://www.google.com/maps/search/?q=Алматы&hl=ru",
+   "Шымкент": "https://www.google.com/maps/search/?q=Шымкент&hl=ru",
+   "Кокшетау": "https://www.google.com/maps/search/?q=Кокшетау&hl=ru",
+   "Костанай": "https://www.google.com/maps/search/?q=Костанай&hl=ru",
+   "Петропавловск": "https://www.google.com/maps/search/?q=Петропавловск&hl=ru",
+   "Тараз": "https://www.google.com/maps/search/?q=Тараз&hl=ru",
+   "Кызылорда": "https://www.google.com/maps/search/?q=Кызылорда&hl=ru",
+   "Туркестан": "https://www.google.com/maps/search/?q=Туркестан&hl=ru",
+   "Атырау": "https://www.google.com/maps/search/?q=Атырау&hl=ru",
+   "Уральск": "https://www.google.com/maps/search/?q=Уральск&hl=ru",
+   "Актау": "https://www.google.com/maps/search/?q=Актау&hl=ru",
+   "Актобе": "https://www.google.com/maps/search/?q=Актобе&hl=ru",
+   "Усть-Каменогорск": "https://www.google.com/maps/search/?q=Усть-Каменогорск&hl=ru",
+   "Семей": "https://www.google.com/maps/search/?q=Семей&hl=ru",
+   "Павлодар": "https://www.google.com/maps/search/?q=Павлодар&hl=ru",
+   "Караганда": "https://www.google.com/maps/search/?q=Караганда&hl=ru",
+   "Темиртау": "https://www.google.com/maps/search/?q=Темиртау&hl=ru",
+   "Талдыкорган": "https://www.google.com/maps/search/?q=Талдыкорган&hl=ru"
+}
+
+
+@bot.message_handler(commands=['help'])
+def help(message):
+   bot.send_message(message.chat.id, 
+                     "<b>Мои команды:</b>\n"
+                     "/start — начать общение с ботом\n"
+                     "/help — получить справку о боте\n"
+                     "/about — узнать информацию о разработчике\n"
+                     "/stop — завершить общение с ботом", parse_mode='html')
+
+@bot.message_handler(commands=['about'])
+def about(message):
+   bot.send_message(message.chat.id, 
+                     "Этот бот был создан в рамках проекта по изучению Python и Telegram API.\n"
+                     "Разработчик: <em><b>yerazz</b></em>", parse_mode='html')
+
+@bot.message_handler(commands=['stop'])
+def stop(message):
+
+   # chat_id = message.chat.id
+   # for i in range(message.message_id - 20, message.message_id + 1):
+   #    try:
+   #       bot.delete_message(chat_id, i)
+   #    except Exception as e:
+   #       print(f"Не удалось удалить сообщение {i}: {e}")
+
+   bot.send_message(message.chat.id, "До свидания! Бот остановлен и больше не реагирует на сообщения.")
+   os._exit(0)
+
+@bot.message_handler(commands=['start'])
+def start(message):
+   bot.send_message(message.chat.id, 
+                     f"Привет, {message.from_user.first_name}! 👋\n"
+                     "Я - твой персональный гид по Казахстану! 🇰🇿\n"
+                     "Могу показать тебе интересные места, рассказать факты и подсказать погоду. 🌍✨")
+
+   command_markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+   command_markup.row('/start', '/stop')
+   command_markup.row('/help', '/about')
+
+   inline_markup = types.InlineKeyboardMarkup()
+   btn1 = types.InlineKeyboardButton('Выбрать город', callback_data='select_city')
+   btn2 = types.InlineKeyboardButton('Ввести название', callback_data='input_city')
+   inline_markup.row(btn1, btn2)
+
+   bot.send_message(message.chat.id, "Для начала выбери действие:",  reply_markup=inline_markup)
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback(callback):
+   if callback.data == 'select_city':
+      markup = types.InlineKeyboardMarkup()
+      for city in cities:
+         markup.add(InlineKeyboardButton(city, callback_data=city))
+      bot.send_message(callback.message.chat.id, "Выбери город из списка:", reply_markup=markup)
+   elif callback.data == 'input_city':
+      bot.send_message(callback.message.chat.id, "Введите название города:")
+   # elif callback.data in cities:
+   #    city = callback.data
+   #    bot.send_message(callback.message.chat.id, f"Информация о городе {city}:\n{city_info[city]}")
+   #    bot.send_photo(callback.message.chat.id, open(city_images[city], 'rb'))
+   #    bot.send_message(callback.message.chat.id, f"Посмотреть на карте: {city_maps[city]}")
+
+bot.polling(none_stop=True)

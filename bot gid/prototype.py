@@ -5,8 +5,10 @@ import os
 import requests
 import time
 
+
 bot = telebot.TeleBot('7780668347:AAFTwSbXzNg02naVu_g2x-k2GiPiYPVlOng')
 api_key = '17697edb22cd6287f4a12ccb3e497513'
+
 
 cities = [
    "Петропавловск", "Кокшетау", "Костанай", "Астана",
@@ -115,9 +117,9 @@ def stop(message):
 def start(message):
    bot.send_message(message.chat.id, 
                      f"Привет, {message.from_user.first_name}! 👋\n"
-                     "Я — твой персональный гид по Казахстану! 🇰🇿\n"
+                     "Я - твой персональный гид по Казахстану! 🇰🇿\n"
                      "Могу показать тебе интересные места, рассказать факты и подсказать погоду. 🌍✨")
-   
+
    command_markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
    command_markup.row('/start', '/stop')
    command_markup.row('/help', '/about')
@@ -130,10 +132,23 @@ def start(message):
    bot.send_message(message.chat.id, "Для начала выбери действие:",  reply_markup=inline_markup)
 
 
-#@bot.callback_query_handler(func=lambda call: True)
-
-# markup = types.InlineKeyboardMarkup()
-# for city in cities:
-#    markup.add(InlineKeyboardButton(city, callback_data=city))
+@bot.callback_query_handler(func=lambda call: True)
+def callback(callback):
+   if callback.data == 'select_city':
+      markup = types.InlineKeyboardMarkup()
+      for city in cities:
+         markup.add(InlineKeyboardButton(city, callback_data=city))
+      bot.send_message(callback.message.chat.id, "Выбери город из списка:", reply_markup=markup)
+   elif callback.data == 'input_city':
+      bot.send_message(callback.message.chat.id, "Введите название города:")
+   # elif callback.data in cities:
+   #    city = callback.data
+   #    bot.send_message(callback.message.chat.id, f"Информация о городе {city}:\n{city_info[city]}")
+   #    bot.send_photo(callback.message.chat.id, open(city_images[city], 'rb'))
+   #    bot.send_message(callback.message.chat.id, f"Посмотреть на карте: {city_maps[city]}")
 
 bot.polling(none_stop=True)
+
+
+
+
