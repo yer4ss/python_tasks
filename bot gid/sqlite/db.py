@@ -1,18 +1,26 @@
 import sqlite3
 import csv
 
+conn = sqlite3.connect('cities.db')
+cursor = conn.cursor()
+cursor.execute('DROP TABLE IF EXISTS cities')          #Обновляем таюлицу через удаление
+
 # Подключение к базе и создание таблицы, если её нет
 def create_table():
    conn = sqlite3.connect('cities.db')
    cursor = conn.cursor()
    cursor.execute('''
       CREATE TABLE IF NOT EXISTS cities (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE,
-            description TEXT,
-            image_url TEXT
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         name TEXT UNIQUE,
+         description TEXT,
+         image_url TEXT,
+         map_url TEXT
       )
    ''')
+
+   print("База данных успешно создана!")
+
    conn.commit()
    conn.close()
 
@@ -22,7 +30,7 @@ def add_city(name, description, image_url):
    conn = sqlite3.connect('cities.db')
    cursor = conn.cursor()
 
-   cursor.execute('INSERT OR REPLACE INTO cities (name, description, image_url) VALUES (?, ?, ?)', 
+   cursor.execute('INSERT OR IGNORE INTO cities (name, description, image_url) VALUES (?, ?, ?)',       #REPLACE - заменяет, если они уже существуют, IGNORE - игнорирует дубликат
                   (name, description, image_url))
 
    conn.commit()
@@ -119,8 +127,7 @@ def get_all_cities():
    return result
 
 
-print("✅ Города добавлены!")
-print(get_all_cities())
+print("✅")
 
 
 # Функция для экспорта базы в CSV
