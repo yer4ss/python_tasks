@@ -1,0 +1,155 @@
+**Ошибки и их исправления в разработке Telegram-бота**
+
+### 1. Дублирование кода при выводе информации о городе
+
+**Ошибка:** В коде были две отдельные функции для обработки выбора города через кнопки и через ввод вручную (`callback` и `process_city_input`), но они дублировали логику.
+
+```python
+# До исправления
+elif callback.data in cities:
+   city = callback.data
+   city_info = get_city_info(city)
+   if city_info:
+      description, image_url = city_info
+      bot.send_photo(callback.message.chat.id, open(image_url, 'rb'))
+      bot.send_message(callback.message.chat.id, f"🏙️ {city}\n\n{description}", parse_mode='Markdown')
+```
+
+**Решение:** Создали отдельную функцию `send_city_info(city, chat_id)`, которая вызывается в обоих случаях, чтобы избежать дублирования.
+
+```python
+# После исправления
+
+def send_city_info(city, chat_id):
+   city_info = get_city_info(city)
+   if city_info:
+      description, image_url = city_info
+      with open(image_url, 'rb') as img:
+         bot.send_photo(chat_id, img)
+      bot.send_message(chat_id, f"🏙️ {city}\n\n{description}", parse_mode='Markdown')
+```
+
+---
+
+### 2. Несоответствие переменных (`city` vs `city_name`)
+
+**Ошибка:** В callback-запросах использовалась переменная `city`, а в `process_city_input` – `city_name`, что приводило к несоответствиям.
+
+```python
+# До исправления
+inline_markup.add(types.InlineKeyboardButton('🌤 Узнать погоду', callback_data=f'weather_{city_name}'))
+```
+
+**Решение:** Привели все переменные к `city`, чтобы везде использовалось одно название.
+
+```python
+# После исправления
+inline_markup.add(types.InlineKeyboardButton('🌤 Узнать погоду', callback_data=f'weather_{city}'))
+```
+
+---
+
+### 3. Ошибка при обработке погоды (`callback_data`)
+
+**Ошибка:** Кнопка `"🌤 Узнать погоду"` передавала `callback_data=f'weather_{city_name}'`, но в `callback`-обработчике использовалось `city = callback.data.split('_')[1]`, что могло ломаться, если город имел пробелы.
+
+```python
+# До исправления
+elif callback.data.startswith('weather_'):
+   city = callback.data.split('_')[1]
+```
+
+**Решение:** Добавили `urllib.parse.quote(city)` при формировании callback, чтобы корректно передавать города с пробелами.
+
+```python
+# После исправления
+import urllib.parse
+
+inline_markup.add(types.InlineKeyboardButton('🌤 Узнать погоду', callback_data=f'weather_{urllib.parse.quote(city)}'))
+```
+
+---
+
+### 4. Ошибка с `bot.send_photo(open(image_url, 'rb'))`
+
+**Ошибка:** При передаче изображения `open(image_url, 'rb')` могло приводить к `FileNotFoundError` или `Unclosed file warning`.
+
+```python
+# До исправления
+bot.send_photo(callback.message.chat.id, open(image_url, 'rb'))
+```
+
+**Решение:** Используем `with open(image_url, 'rb') as img:` для корректного закрытия файла.
+
+```python
+# После исправления
+with open(image_url, 'rb') as img:
+   bot.send_photo(callback.message.chat.id, img)
+```
+
+---
+
+### 5. Некорректное кеширование погоды
+
+**Ошибка:** При запросе погоды данные могли не обновляться даже после 10 минут, так как `CACHE_TIMEOUT` сравнивался с `time.time()` без обновления в случае ошибки.
+
+```python
+# До исправления
+if city in weather_cache and time.time() - weather_cache[city]['time'] < CACHE_TIMEOUT:
+   return weather_cache[city]['data']
+```
+
+**Решение:**
+- Если запрос API неудачный, не обновлять кеш.
+- В коде `weather_cache[city] = {'data': weather_data, 'time': current_time}` выполняем только если API вернул валидные данные.
+
+```python
+# После исправления
+if response.get("main"):
+   weather_cache[city] = {'data': weather_data, 'time': current_time}
+   return weather_data
+```
+
+---
+
+### 6. Ошибка с `callback_query_handler(func=lambda call: True)`
+
+**Ошибка:** Такой универсальный обработчик принимал все callback-запросы, включая неизвестные, что могло приводить к ошибкам.
+
+```python
+# До исправления
+@bot.callback_query_handler(func=lambda call: True)
+```
+
+**Решение:**
+- Добавили проверку `if 'weather_' in callback.data:` перед разбором города.
+- Для неизвестных callback'ов выводим `bot.send_message(callback.message.chat.id, "❗ Неизвестная команда.")`.
+
+```python
+# После исправления
+@bot.callback_query_handler(func=lambda call: call.data.startswith('weather_') or call.data in cities)
+```
+
+---
+
+### 7. Запрос города через ввод вручную (`input_city`) не был связан с `select_city`
+
+**Ошибка:** Если пользователь вводил город вручную, бот обрабатывал это отдельно, без связи с `select_city`.
+
+```python
+# До исправления
+elif callback.data == 'input_city':
+   msg = bot.send_message(callback.message.chat.id, "Введите название города:")
+   bot.register_next_step_handler(msg, process_city_input)
+```
+
+**Решение:**
+- После ввода город передавался в `callback`-обработчик так же, как если бы он был выбран из списка.
+
+```python
+# После исправления
+def process_city_input(message):
+   city = message.text
+   send_city_info(city, message.chat.id)
+```
+
