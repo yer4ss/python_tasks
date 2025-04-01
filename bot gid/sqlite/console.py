@@ -15,8 +15,7 @@ def create_table():
          id INTEGER PRIMARY KEY AUTOINCREMENT,
          name TEXT UNIQUE,
          description TEXT,
-         image_url TEXT,
-         map_url TEXT
+         image_url TEXT
       )
    ''')
 
@@ -130,6 +129,13 @@ def get_all_cities():
 
 print("✅")
 
+
+
+
+
+
+
+
 # Функция для экспорта базы в CSV
 def export_to_csv():
    cities = get_all_cities()
@@ -138,6 +144,7 @@ def export_to_csv():
       writer.writerow(["ID", "Название", "Описание", "Ссылка на изображение"])
       writer.writerows(cities)
    print("✅ Данные успешно экспортированы в cities_export.csv!")
+
 
 
 
