@@ -103,77 +103,10 @@ def get_city_list():
 cities = get_city_list()
 user_data = {}
 
-def process_city(chat_id, city_name):
-    city_info = get_city_info(city_name)
-    
-    if city_info:
-        description, image_url, trip_code, trip_name = city_info
-        
-        # Сохраняем trip_code и trip_name в user_data
-        user_data[chat_id] = {"trip_code": trip_code, "trip_name": trip_name}
-
-        bot.send_photo(chat_id, open(image_url, 'rb'))
-        bot.send_message(chat_id, f"🏙️ {city_name}\n\n{description}", parse_mode='Markdown')
-        
-        inline_markup = types.InlineKeyboardMarkup()
-        weather_btn = types.InlineKeyboardButton('🌤 Узнать погоду', callback_data=f'weather_{city_name}')
-        map_btn = types.InlineKeyboardButton('🗺 Посмотреть на карте', url=f'https://www.google.com/maps/search/?q={city_name}&hl=ru')
-        inline_markup.row(weather_btn, map_btn)
-
-        inline_markup.row(
-            types.InlineKeyboardButton('🏛️ Достопримечательности', callback_data='attractions'),
-            types.InlineKeyboardButton('🏨 Отели', callback_data='hotels'),
-            types.InlineKeyboardButton('🍽️ Рестораны', callback_data='restaurants')
-        )
-
-        inline_markup.add(types.InlineKeyboardButton('⬅ Назад', callback_data='city_list'))
-
-         
-        bot.send_message(chat_id, "Что вас интересует?", reply_markup=inline_markup)
-    
-    else:
-        bot.send_message(chat_id, "❗ Город не найден. Попробуйте снова.")
-
-
-
-@bot.callback_query_handler(func=lambda call: True)
-def callback(callback):
-   chat_id = callback.message.chat.id
-   
-   if callback.data == 'city_list':
-      markup = types.InlineKeyboardMarkup()
-      buttons = [types.InlineKeyboardButton(city, callback_data=city) for city in cities]
-      for i in range(0, len(buttons), 3):
-         markup.row(*buttons[i:i+3])
-
-      bot.send_message(chat_id, "Выбери город из списка:", reply_markup=markup)
-
-   elif callback.data == 'input_city':
-      msg = bot.send_message(chat_id, "Введите название города:")
-      bot.register_next_step_handler(msg, lambda m: process_city(m.chat.id, m.text))
-
-   elif callback.data.startswith('weather_'):
-      city = callback.data.split('_')[1]
-      weather = get_weather(city)
-      bot.send_message(chat_id, f"🌤️ Погода в {city}:{weather}")
-
-   elif callback.data in cities:
-      process_city(chat_id, callback.data)
-
-   elif callback.data in ['attractions', 'hotels', 'restaurants']:
-    user_info = user_data.get(chat_id)
-    if user_info:
-        send_places(callback.message, user_info["trip_code"], user_info["trip_name"])
-    else:
-        bot.send_message(chat_id, "⚠ Сначала выберите город.")
-
-   else:
-      bot.send_message(chat_id, "❗ Неизвестная команда. Попробуйте снова.")
-
 
 
 @bot.message_handler(commands=['attractions', 'hotels', 'restaurants'])
-def send_places(message, trip_code, trip_name):
+def send_places(message, trip_code, trip_name, category):
     chat_id = message.chat.id if message else callback.message.chat.id
 
     if trip_code is None or trip_name is None:
@@ -203,7 +136,7 @@ def send_places(message, trip_code, trip_name):
         }
 
         # Определяем, какая команда была вызвана
-        command = message.text.lstrip('/')
+        command = category
         target_section = None
 
         # Ищем нужный раздел по заголовку <h3>
@@ -254,11 +187,86 @@ def send_places(message, trip_code, trip_name):
                     f"📌 {place['Кол-во отзывов']} отзывов\n"
                     f"📖 {place['Описание']}"
                 )
+                
         else:
             bot.send_message(message.chat.id, f"⚠ В разделе '{command}' нет мест.")
     else:
         bot.send_message(message.chat.id, "❌ Ошибка при получении данных.")
 
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback(callback):
+    chat_id = callback.message.chat.id
+
+    # Обработка выбора города
+    if callback.data == 'city_list':
+        markup = types.InlineKeyboardMarkup()
+        buttons = [types.InlineKeyboardButton(city, callback_data=city) for city in cities]
+        for i in range(0, len(buttons), 3):
+            markup.row(*buttons[i:i+3])
+
+        bot.send_message(chat_id, "Выбери город из списка:", reply_markup=markup)
+
+    # Обработка запроса на ввод города
+    elif callback.data == 'input_city':
+        msg = bot.send_message(chat_id, "Введите название города:")
+        bot.register_next_step_handler(msg, lambda m: process_city(m.chat.id, m.text))
+
+    # Обработка запроса на погоду
+    elif callback.data.startswith('weather_'):
+        city = callback.data.split('_')[1]
+        weather = get_weather(city)
+        bot.send_message(chat_id, f"🌤️ Погода в {city}: {weather}")
+
+    # Обработка выбора города из списка
+    elif callback.data in cities:
+        process_city(chat_id, callback.data)
+
+    # Обработка выбора разделов: достопримечательности, отели, рестораны
+    elif callback.data in ['attractions', 'hotels', 'restaurants']:
+        user_info = user_data.get(chat_id)
+        if user_info:
+            send_places(callback.message, user_info["trip_code"], user_info["trip_name"], callback.data)
+        else:
+            bot.send_message(chat_id, "⚠ Сначала выберите город.")
+
+    else:
+        bot.send_message(chat_id, "❗ Неизвестная команда. Попробуйте снова.")
+
+
+
+def process_city(chat_id, city_name):
+    city_info = get_city_info(city_name)
+
+    if city_info:
+        description, image_url, trip_code, trip_name = city_info
+        
+        # Сохраняем данные города в user_data
+        user_data[chat_id] = {"city_name": city_name, "trip_code": trip_code, "trip_name": trip_name}
+
+        # Отправляем фото и описание города
+        bot.send_photo(chat_id, open(image_url, 'rb'))
+        bot.send_message(chat_id, f"🏙️ {city_name}\n\n{description}", parse_mode='Markdown')
+
+        # Создаем кнопки для дальнейшего выбора
+        inline_markup = types.InlineKeyboardMarkup()
+        weather_btn = types.InlineKeyboardButton('🌤 Узнать погоду', callback_data=f'weather_{city_name}')
+        map_btn = types.InlineKeyboardButton('🗺 Посмотреть на карте', url=f'https://www.google.com/maps/search/?q={city_name}&hl=ru')
+        inline_markup.row(weather_btn, map_btn)
+
+        inline_markup.row(
+            types.InlineKeyboardButton('🏛️ Достопримечательности', callback_data='attractions'),
+            types.InlineKeyboardButton('🏨 Отели', callback_data='hotels'),
+            types.InlineKeyboardButton('🍽️ Рестораны', callback_data='restaurants')
+        )
+
+        inline_markup.add(types.InlineKeyboardButton('⬅ Назад', callback_data='city_list'))
+
+        bot.send_message(chat_id, "Что вас интересует?", reply_markup=inline_markup)
+    
+    else:
+        bot.send_message(chat_id, "❗ Город не найден. Попробуйте снова.")
 
 
 bot.polling(none_stop=True)
