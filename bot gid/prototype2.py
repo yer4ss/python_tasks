@@ -187,11 +187,16 @@ def send_places(message, trip_code, trip_name, category):
                     f"📌 {place['Кол-во отзывов']} отзывов\n"
                     f"📖 {place['Описание']}"
                 )
-                
         else:
             bot.send_message(message.chat.id, f"⚠ В разделе '{command}' нет мест.")
     else:
         bot.send_message(message.chat.id, "❌ Ошибка при получении данных.")
+    
+    back_markup = types.InlineKeyboardMarkup()
+    back_btn = types.InlineKeyboardButton("⬅ Назад к городу", callback_data="back_to_city")
+    back_markup.add(back_btn)
+
+    bot.send_message(message.chat.id, "Если хотите вернуться", reply_markup=back_markup)
 
 
 
@@ -230,6 +235,14 @@ def callback(callback):
             send_places(callback.message, user_info["trip_code"], user_info["trip_name"], callback.data)
         else:
             bot.send_message(chat_id, "⚠ Сначала выберите город.")
+
+    elif callback.data == "back_to_city":
+        user_info = user_data.get(chat_id)
+        if user_info:
+            process_city(chat_id, user_info["city_name"])
+        else:
+            bot.send_message(chat_id, "⚠ Сначала выберите город.")
+
 
     else:
         bot.send_message(chat_id, "❗ Неизвестная команда. Попробуйте снова.")
