@@ -13,39 +13,39 @@ bot = telebot.TeleBot('7780668347:AAFTwSbXzNg02naVu_g2x-k2GiPiYPVlOng')
 
 @bot.message_handler(commands=['start', 'stop', 'help', 'about'])
 def handle_commands(message):
-   if message.text == '/start':
-      command_markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-      command_markup.row('/start', '/stop')
-      command_markup.row('/help', '/about')
+    if message.text == '/start':
+        command_markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        command_markup.row('/start', '/stop')
+        command_markup.row('/help', '/about')
 
-      bot.send_message(message.chat.id, 
+        bot.send_message(message.chat.id, 
                         f"Привет, {message.from_user.first_name}! 👋\n"
                         "Я - твой персональный гид по Казахстану! 🇰🇿\n"
                         "Могу показать тебе интересные места, рассказать факты и подсказать погоду. 🌍✨", reply_markup=command_markup)
 
-      inline_markup = types.InlineKeyboardMarkup()
-      btn1 = types.InlineKeyboardButton('Выбрать город', callback_data='city_list')
-      btn2 = types.InlineKeyboardButton('Ввести название', callback_data='input_city')
-      inline_markup.row(btn1, btn2)
+        inline_markup = types.InlineKeyboardMarkup()
+        btn1 = types.InlineKeyboardButton('Выбрать город', callback_data='city_list')
+        btn2 = types.InlineKeyboardButton('Ввести название', callback_data='input_city')
+        inline_markup.row(btn1, btn2)
 
-      bot.send_message(message.chat.id, "Для начала выбери действие:", reply_markup=inline_markup)
+        bot.send_message(message.chat.id, "Для начала выбери действие:", reply_markup=inline_markup)
 
-   elif message.text == '/help':
-      bot.send_message(message.chat.id, 
+    elif message.text == '/help':
+        bot.send_message(message.chat.id, 
                         "<b>Мои команды:</b>\n"
                         "/start — начать общение с ботом\n"
                         "/help — получить справку о боте\n"
                         "/about — узнать информацию о разработчике\n"
                         "/stop — завершить общение с ботом", parse_mode='html')
 
-   elif message.text == '/about':
-      bot.send_message(message.chat.id, 
+    elif message.text == '/about':
+        bot.send_message(message.chat.id, 
                         "Этот бот был создан в рамках проекта по изучению Python и Telegram API.\n"
                         "Разработчик: <em><b>yerazz</b></em>", parse_mode='html')
 
-   elif message.text == '/stop':
-      bot.send_message(message.chat.id, "До свидания! Бот остановлен и больше не реагирует на сообщения.")
-      os._exit(0)
+    elif message.text == '/stop':
+        bot.send_message(message.chat.id, "До свидания! Бот остановлен и больше не реагирует на сообщения.")
+        os._exit(0)
 
 
 
@@ -54,51 +54,51 @@ weather_cache = {}
 CACHE_TIMEOUT = 600  # 10 минут
 
 def get_weather(city):
-      current_time = time.time()
-      if city in weather_cache and current_time - weather_cache[city]['time'] < CACHE_TIMEOUT:
-         return weather_cache[city]['data']
+    current_time = time.time()
+    if city in weather_cache and current_time - weather_cache[city]['time'] < CACHE_TIMEOUT:
+        return weather_cache[city]['data']
 
-      url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric&lang=ru"
-      response = requests.get(url).json()
-      if response.get("main"):
-         weather_desc = response['weather'][0]['description']
-         temp = response["main"]["temp"]
-         wind = response["wind"]["speed"]
-         humidity = response["main"]["humidity"]
-         pressure = response["main"]["pressure"]
-         cloudiness = response["clouds"]["all"]
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric&lang=ru"
+    response = requests.get(url).json()
+    if response.get("main"):
+        weather_desc = response['weather'][0]['description']
+        temp = response["main"]["temp"]
+        wind = response["wind"]["speed"]
+        humidity = response["main"]["humidity"]
+        pressure = response["main"]["pressure"]
+        cloudiness = response["clouds"]["all"]
 
-         weather_data = (
+        weather_data = (
             f" {weather_desc.capitalize()}\n"
             f"🌡️ Температура: {temp}°C\n"
             f"💨 Ветер: {wind} м/с\n"
             f"💧 Влажность: {humidity}%\n"
             f"🔽 Давление: {pressure} мм рт. ст.\n"
             f"☁️ Облачность: {cloudiness}%"
-         )
-         weather_cache[city] = {'data': weather_data, 'time': current_time}
-         return weather_data
+        )
+        weather_cache[city] = {'data': weather_data, 'time': current_time}
+        return weather_data
 
-      else:
-         return "Не удалось получить погоду."
+    else:
+        return "Не удалось получить погоду."
 
 
 
 def get_city_info(name):
-   conn = sqlite3.connect('cities.db')
-   cursor = conn.cursor()
-   cursor.execute('SELECT description, image_url, trip_code, trip_name FROM cities WHERE name = ?', (name,))
-   result = cursor.fetchone()
-   conn.close()
-   return result
+    conn = sqlite3.connect('cities.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT description, image_url, trip_code, trip_name FROM cities WHERE name = ?', (name,))
+    result = cursor.fetchone()
+    conn.close()
+    return result
 
 def get_city_list():
-   conn = sqlite3.connect('cities.db')
-   cursor = conn.cursor()
-   cursor.execute('SELECT name FROM cities')
-   cities = [city[0] for city in cursor.fetchall()]
-   conn.close()
-   return cities
+    conn = sqlite3.connect('cities.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT name FROM cities')
+    cities = [city[0] for city in cursor.fetchall()]
+    conn.close()
+    return cities
 
 cities = get_city_list()
 user_data = {}
@@ -128,18 +128,15 @@ def send_places(message, trip_code, trip_name, category):
         soup = BeautifulSoup(response.text, "html.parser")
         sections = soup.find_all("div", class_="AOgUr")
 
-        # Соответствие заголовков и команд
         section_titles = {
             "Чем заняться": "attractions",
             "Где остановиться": "hotels",
             "Еда и напитки": "restaurants"
         }
 
-        # Определяем, какая команда была вызвана
         command = category
         target_section = None
 
-        # Ищем нужный раздел по заголовку <h3>
         for section in sections:
             title_tag = section.find("h3", class_="biGQs _P fiohW uuBRH")  # Заголовок секции
             if title_tag and title_tag.text.strip() in section_titles:
@@ -204,7 +201,6 @@ def send_places(message, trip_code, trip_name, category):
 def callback(callback):
     chat_id = callback.message.chat.id
 
-    # Обработка выбора города
     if callback.data == 'city_list':
         markup = types.InlineKeyboardMarkup()
         buttons = [types.InlineKeyboardButton(city, callback_data=city) for city in cities]
@@ -213,22 +209,18 @@ def callback(callback):
 
         bot.send_message(chat_id, "Выбери город из списка:", reply_markup=markup)
 
-    # Обработка запроса на ввод города
     elif callback.data == 'input_city':
         msg = bot.send_message(chat_id, "Введите название города:")
         bot.register_next_step_handler(msg, lambda m: process_city(m.chat.id, m.text))
 
-    # Обработка запроса на погоду
     elif callback.data.startswith('weather_'):
         city = callback.data.split('_')[1]
         weather = get_weather(city)
         bot.send_message(chat_id, f"🌤️ Погода в {city}: {weather}")
 
-    # Обработка выбора города из списка
     elif callback.data in cities:
         process_city(chat_id, callback.data)
 
-    # Обработка выбора разделов: достопримечательности, отели, рестораны
     elif callback.data in ['attractions', 'hotels', 'restaurants']:
         user_info = user_data.get(chat_id)
         if user_info:
@@ -255,14 +247,11 @@ def process_city(chat_id, city_name):
     if city_info:
         description, image_url, trip_code, trip_name = city_info
         
-        # Сохраняем данные города в user_data
         user_data[chat_id] = {"city_name": city_name, "trip_code": trip_code, "trip_name": trip_name}
 
-        # Отправляем фото и описание города
         bot.send_photo(chat_id, open(image_url, 'rb'))
         bot.send_message(chat_id, f"🏙️ {city_name}\n\n{description}", parse_mode='Markdown')
 
-        # Создаем кнопки для дальнейшего выбора
         inline_markup = types.InlineKeyboardMarkup()
         weather_btn = types.InlineKeyboardButton('🌤 Узнать погоду', callback_data=f'weather_{city_name}')
         map_btn = types.InlineKeyboardButton('🗺 Посмотреть на карте', url=f'https://www.google.com/maps/search/?q={city_name}&hl=ru')
