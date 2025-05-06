@@ -1,5 +1,6 @@
 import telebot
 from telebot import types
+import config
 import os
 import requests
 import time
@@ -8,7 +9,7 @@ from bs4 import BeautifulSoup
 from io import BytesIO
 
 
-bot = telebot.TeleBot('7780668347:AAFTwSbXzNg02naVu_g2x-k2GiPiYPVlOng')
+bot = telebot.TeleBot(config.token)
 
 
 @bot.message_handler(commands=['start', 'stop', 'help', 'about'])
@@ -48,7 +49,6 @@ def handle_commands(message):
         os._exit(0)
 
 
-
 api_key = '17697edb22cd6287f4a12ccb3e497513'
 weather_cache = {}
 CACHE_TIMEOUT = 600  # 10 минут
@@ -83,7 +83,6 @@ def get_weather(city):
         return "Не удалось получить погоду."
 
 
-
 def get_city_info(name):
     conn = sqlite3.connect('cities.db')
     cursor = conn.cursor()
@@ -104,7 +103,6 @@ cities = get_city_list()
 user_data = {}
 
 
-
 @bot.message_handler(commands=['attractions', 'hotels', 'restaurants'])
 def send_places(message, trip_code, trip_name, category):
     chat_id = message.chat.id if message else callback.message.chat.id
@@ -116,14 +114,13 @@ def send_places(message, trip_code, trip_name, category):
             return
         trip_code, trip_name = user_info["trip_code"], user_info["trip_name"]
 
-
     url = f"https://www.tripadvisor.ru/Tourism-{trip_code}-{trip_name}-Vacations.html"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
     }
 
     response = requests.get(url, headers=headers)
-    
+
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, "html.parser")
         sections = soup.find_all("div", class_="AOgUr")
@@ -196,7 +193,6 @@ def send_places(message, trip_code, trip_name, category):
     bot.send_message(message.chat.id, "Если хотите вернуться", reply_markup=back_markup)
 
 
-
 @bot.callback_query_handler(func=lambda call: True)
 def callback(callback):
     chat_id = callback.message.chat.id
@@ -235,10 +231,8 @@ def callback(callback):
         else:
             bot.send_message(chat_id, "⚠ Сначала выберите город.")
 
-
     else:
         bot.send_message(chat_id, "❗ Неизвестная команда. Попробуйте снова.")
-
 
 
 def process_city(chat_id, city_name):
